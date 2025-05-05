@@ -7,12 +7,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (menuToggle && navMenu) {
         menuToggle.addEventListener('click', () => {
             navMenu.classList.toggle('active');
-            // Optional: Toggle body class to prevent scroll
-            // document.body.classList.toggle('menu-open');
+            // document.body.classList.toggle('menu-open'); // Optional
         });
     }
 
-    // --- Exchange Form Logic ---
+    // --- Exchange Form Elements ---
     const sendAmountInput = document.getElementById('send-amount-input');
     const receiveAmountInput = document.getElementById('receive-amount-input');
     const sendCurrencySelect = document.getElementById('send-currency-select');
@@ -21,193 +20,223 @@ document.addEventListener('DOMContentLoaded', function() {
     const receiveCurrencyIcon = document.getElementById('receive-currency-icon');
     const swapButton = document.getElementById('swap-button');
     const exchangeRateDisplay = document.getElementById('exchange-rate-display');
+    // Placeholder: Add elements for reserve/limit display if needed
+    // const sendLimitInfo = document.getElementById('send-limit-info');
+    // const receiveReserveInfo = document.getElementById('receive-reserve-info');
 
     const binanceApiBase = 'https://api.binance.com/api/v3/ticker/price';
+    const priceCache = {}; // Simple cache { 'SYMBOL': { price: number, timestamp: number } }
+    const CACHE_DURATION = 15000; // Cache price for 15 seconds
 
-    // Function to fetch price from Binance API
-    async function fetchBinancePrice(symbol) {
-        // Simple cache to avoid hitting API too often for the *exact* same symbol quickly
-        const cacheKey = `price_${symbol}`;
-        const cachedData = sessionStorage.getItem(cacheKey);
+    // --- Helper Functions ---
+
+    /**
+     * Fetches price from cache or Binance API.
+     * @param {string} symbol - The Binance symbol (e.g., BTCUSDT).
+     * @returns {Promise<number|null>} The price or null if error.
+     */
+    async function getPrice(symbol) {
         const now = Date.now();
-
-        if (cachedData) {
-            const { price, timestamp } = JSON.parse(cachedData);
-            // Use cache if less than 10 seconds old
-            if (now - timestamp < 10000) {
-                console.log(`Using cached price for ${symbol}`);
-                return parseFloat(price);
-            }
+        if (priceCache[symbol] && (now - priceCache[symbol].timestamp < CACHE_DURATION)) {
+            console.log(`Using cached price for ${symbol}`);
+            return priceCache[symbol].price;
         }
 
         console.log(`Fetching price for ${symbol}...`);
         try {
             const response = await fetch(`${binanceApiBase}?symbol=${symbol}`);
             if (!response.ok) {
-                // Handle cases where the pair might not exist directly (e.g., SBERRUB)
-                // or other API errors
                 console.error(`Binance API error for ${symbol}: ${response.status}`);
-                 // Try fetching inverse pair if applicable (basic example)
-                 if (symbol.includes('USDT') && !symbol.startsWith('USDT')) {
-                     const base = symbol.replace('USDT','');
-                     const inverseSymbol = `USDT${base}`;
-                     console.log(`Trying inverse symbol: ${inverseSymbol}`)
-                     const invResponse = await fetch(`${binanceApiBase}?symbol=${inverseSymbol}`);
-                     if(invResponse.ok) {
-                         const invData = await invResponse.json();
-                         const invPrice = parseFloat(invData.price);
-                          if (invPrice > 0) {
-                              const price = 1 / invPrice;
-                               sessionStorage.setItem(cacheKey, JSON.stringify({ price: price, timestamp: now }));
-                              return price;
-                          }
-                     }
-                 }
-                return null; // Indicate failure
+                // If symbol invalid, response often has code -1121
+                // const errorData = await response.json().catch(() => ({})); // Try to get error code
+                // console.error("Error data:", errorData);
+                return null; // Symbol likely invalid or other API issue
             }
             const data = await response.json();
             const price = parseFloat(data.price);
-            // Cache the result
-            sessionStorage.setItem(cacheKey, JSON.stringify({ price: price, timestamp: now }));
+
+            if (isNaN(price) || price <= 0) {
+                console.error(`Invalid price received for ${symbol}:`, data.price);
+                return null;
+            }
+
+            // Update cache
+            priceCache[symbol] = { price: price, timestamp: now };
             return price;
         } catch (error) {
-            console.error('Network error fetching Binance price:', error);
-            return null; // Indicate failure
+            console.error(`Network error fetching Binance price for ${symbol}:`, error);
+            exchangeRateDisplay.textContent = 'Курс обмена: Ошибка сети'; // Network error feedback
+            return null;
         }
     }
 
-    // Function to determine the correct Binance symbol and calculation direction
-    function getSymbolAndDirection(sendCurrency, receiveCurrency) {
-        // Prioritize standard pairs (e.g., BTCUSDT, ETHBTC)
-        const standardSymbol = `${sendCurrency}${receiveCurrency}`;
-        const reversedSymbol = `${receiveCurrency}${sendCurrency}`;
-        const supportedPairs = ["BTCUSDT", "ETHUSDT", "ETHBTC", "BNBBTC", "BNBUSDT"]; // Add more known pairs
+    /**
+     * Determines the correct Binance symbol and calculation direction.
+     * Returns { symbol: string|null, calculation: 'multiply'|'divide'|null }
+     */
+    async function findSymbolAndCalculation(send, receive) {
+        const standardSymbol = `${send}${receive}`;
+        const reversedSymbol = `${receive}${send}`;
 
-        if (supportedPairs.includes(standardSymbol)) {
-            return { symbol: standardSymbol, direction: 'standard' }; // Multiply by rate
-        } else if (supportedPairs.includes(reversedSymbol)) {
-            return { symbol: reversedSymbol, direction: 'reversed' }; // Divide by rate
+        // Try standard direction first (e.g., BTCUSDT)
+        let price = await getPrice(standardSymbol);
+        if (price !== null) {
+            // Found SENDRECEIVE pair (e.g., BTCUSDT). 1 SEND = price RECEIVE
+            return { symbol: standardSymbol, price: price, calculation: 'multiply' };
         }
-        // Add specific logic for Fiat or less common pairs if needed
-        // e.g., if receiveCurrency is 'SBERRUB' and send is 'USDT'
-        // else if (sendCurrency === 'USDT' && receiveCurrency === 'SBERRUB') {
-        //     return { symbol: 'USDTRUB', direction: 'standard' }; // Assuming API provides USDTRUB
-        // }
 
-        // Fallback: Try the standard combination, API might support it
-        console.warn(`Pair ${standardSymbol} or ${reversedSymbol} not explicitly listed. Trying ${standardSymbol}.`);
-        return { symbol: standardSymbol, direction: 'standard' };
+        // Try reversed direction (e.g., USDTETH - API might list ETHUSDT)
+        price = await getPrice(reversedSymbol);
+        if (price !== null) {
+             // Found RECEIVESEND pair (e.g., ETHUSDT). 1 RECEIVE = price SEND
+             // So, 1 SEND = 1/price RECEIVE
+            return { symbol: reversedSymbol, price: price, calculation: 'divide' };
+        }
+
+        // Could not find a direct pair
+        console.warn(`Could not find price for ${standardSymbol} or ${reversedSymbol}`);
+        return { symbol: null, price: null, calculation: null };
     }
 
-
-    // Function to update the receive amount and rate display
-    async function updateCalculation() {
+    /**
+     * Updates the receive amount and displayed rate based on inputs.
+     */
+    async function updateExchangeCalculation() {
         const sendCurrency = sendCurrencySelect.value;
         const receiveCurrency = receiveCurrencySelect.value;
         const sendAmount = parseFloat(sendAmountInput.value);
 
+        // Clear outputs if input is invalid or currencies are the same
         if (isNaN(sendAmount) || sendAmount <= 0 || !sendCurrency || !receiveCurrency || sendCurrency === receiveCurrency) {
             receiveAmountInput.value = '';
             exchangeRateDisplay.textContent = 'Курс обмена: ---';
             return;
         }
 
-        // Update Icons
-        const sendOption = sendCurrencySelect.options[sendCurrencySelect.selectedIndex];
-        const receiveOption = receiveCurrencySelect.options[receiveCurrencySelect.selectedIndex];
-        sendCurrencyIcon.src = sendOption.getAttribute('data-icon') || 'placeholder-icon.png';
-        receiveCurrencyIcon.src = receiveOption.getAttribute('data-icon') || 'placeholder-icon.png';
-        sendCurrencyIcon.alt = sendCurrency;
-        receiveCurrencyIcon.alt = receiveCurrency;
+        // Update Currency Icons (using data-icon attribute)
+        try {
+            const sendOption = sendCurrencySelect.options[sendCurrencySelect.selectedIndex];
+            const receiveOption = receiveCurrencySelect.options[receiveCurrencySelect.selectedIndex];
+            sendCurrencyIcon.src = sendOption.getAttribute('data-icon') || 'placeholder-icon.png';
+            receiveCurrencyIcon.src = receiveOption.getAttribute('data-icon') || 'placeholder-icon.png';
+            sendCurrencyIcon.alt = sendCurrency;
+            receiveCurrencyIcon.alt = receiveCurrency;
+        } catch (e) { console.error("Error updating icons:", e)}
 
 
         exchangeRateDisplay.textContent = 'Курс обмена: Загрузка...';
         receiveAmountInput.value = ''; // Clear while loading
 
-        const { symbol, direction } = getSymbolAndDirection(sendCurrency, receiveCurrency);
+        // Find the correct API symbol and how to use its price
+        const { symbol, price, calculation } = await findSymbolAndCalculation(sendCurrency, receiveCurrency);
 
-        if (!symbol) {
-             exchangeRateDisplay.textContent = 'Курс обмена: Пара не поддерживается';
-             return;
-        }
-
-        const price = await fetchBinancePrice(symbol);
-
-        if (price === null || price <= 0) {
-            exchangeRateDisplay.textContent = 'Курс обмена: Ошибка получения курса';
-            receiveAmountInput.value = '';
+        if (calculation === null || price === null) {
+            exchangeRateDisplay.textContent = 'Курс обмена: Пара недоступна';
             return;
         }
 
-        let calculatedRate = 0;
+        let rateForDisplay = 0;
         let receiveAmount = 0;
 
-        // --- Basic Calculation (No Fee/Markup) ---
-        if (direction === 'standard') {
-            calculatedRate = price; // 1 Send = Price Receive
-            receiveAmount = sendAmount * calculatedRate;
-        } else { // reversed
-            calculatedRate = 1 / price; // 1 Send = (1/Price) Receive
-            receiveAmount = sendAmount * calculatedRate;
-            // OR: receiveAmount = sendAmount / price; // If thinking as 1 Receive = Price Send
+        // Perform calculation based on the direction found
+        if (calculation === 'multiply') {
+            // We fetched SENDRECEIVE (e.g., BTCUSDT)
+            // 1 SEND costs `price` RECEIVE
+            rateForDisplay = price;
+            receiveAmount = sendAmount * price;
+        } else { // calculation === 'divide'
+            // We fetched RECEIVESEND (e.g., ETHUSDT, but want USDT -> ETH)
+            // 1 RECEIVE costs `price` SEND.
+            // So, 1 SEND buys `1/price` RECEIVE
+            if (price === 0) { // Avoid division by zero
+                 exchangeRateDisplay.textContent = 'Курс обмена: Ошибка курса (0)';
+                 return;
+            }
+            rateForDisplay = 1 / price;
+            receiveAmount = sendAmount / price; // Equivalent to sendAmount * (1/price)
         }
-        // --- END Basic Calculation ---
 
-        // --- ADD YOUR EXCHANGE FEE/MARKUP LOGIC HERE ---
-        // Example: Add a 1% fee
-        const feePercentage = 0.01; // 1%
-        receiveAmount = receiveAmount * (1 - feePercentage);
-        // Update the displayed rate to reflect the fee if desired
-        // calculatedRate = calculatedRate * (1 - feePercentage);
-        // --- END FEE LOGIC ---
+        // --- Apply Your Exchange Fee/Markup ---
+        const feePercentage = 0.01; // Example: 1% fee
+        receiveAmount *= (1 - feePercentage);
+        // Adjust the displayed rate ONLY if you want the user to see the rate *after* your fee
+        // rateForDisplay *= (1 - feePercentage);
+        // --- End Fee/Markup ---
+
+        // --- Format Output ---
+        // Determine appropriate decimal places (simple example)
+        const cryptoDecimals = 8;
+        const stablecoinDecimals = 2;
+        let receiveDecimals = cryptoDecimals;
+        if (['USDT', 'USDC', 'BUSD', 'DAI'].includes(receiveCurrency)) { // Add other stables
+            receiveDecimals = stablecoinDecimals;
+        }
+        let rateDecimals = cryptoDecimals;
+         if (['USDT', 'USDC', 'BUSD', 'DAI'].includes(receiveCurrency)) {
+            rateDecimals = stablecoinDecimals;
+         }
+         // If the rate is very small, show more decimals
+         if (rateForDisplay > 0 && rateForDisplay < 0.01) {
+             rateDecimals = Math.max(rateDecimals, 6);
+         }
 
 
-        // Format the output (adjust decimal places based on currency)
-        let decimals = 8; // Default crypto
-        if (['USDT', 'USD', 'EUR', 'RUB'].includes(receiveCurrency)) decimals = 2; // Fiat or stablecoin
-        // Add more rules if needed
-        receiveAmountInput.value = receiveAmount > 0 ? receiveAmount.toFixed(decimals) : '';
+        receiveAmountInput.value = receiveAmount > 0 ? receiveAmount.toFixed(receiveDecimals) : '';
+        exchangeRateDisplay.textContent = `Курс обмена: 1 ${sendCurrency} ≈ ${rateForDisplay.toFixed(rateDecimals)} ${receiveCurrency}`;
 
-        exchangeRateDisplay.textContent = `Курс обмена: 1 ${sendCurrency} ≈ ${calculatedRate.toFixed(decimals)} ${receiveCurrency}`;
+        // Placeholder: Update limits/reserves if you have that data
+        // sendLimitInfo.textContent = `Мин: ... ${sendCurrency} | Макс: ... ${sendCurrency}`;
+        // receiveReserveInfo.textContent = `Резерв: ... ${receiveCurrency}`;
     }
 
-    // Function to swap currencies
+    /**
+     * Swaps the selected currencies and recalculates.
+     */
     function swapCurrencies() {
-        const sendVal = sendCurrencySelect.value;
-        const receiveVal = receiveCurrencySelect.value;
+        const currentSendValue = sendCurrencySelect.value;
+        const currentReceiveValue = receiveCurrencySelect.value;
 
-        // Check if the current receive value exists in the send options and vice-versa
-        const sendHasReceive = [...sendCurrencySelect.options].some(opt => opt.value === receiveVal);
-        const receiveHasSend = [...receiveCurrencySelect.options].some(opt => opt.value === sendVal);
+        // Check if the swap is valid (if the options exist in both selects)
+        const sendHasReceive = [...sendCurrencySelect.options].some(opt => opt.value === currentReceiveValue);
+        const receiveHasSend = [...receiveCurrencySelect.options].some(opt => opt.value === currentSendValue);
 
         if (sendHasReceive && receiveHasSend) {
-            sendCurrencySelect.value = receiveVal;
-            receiveCurrencySelect.value = sendVal;
-            updateCalculation(); // Recalculate after swap
+            sendCurrencySelect.value = currentReceiveValue;
+            receiveCurrencySelect.value = currentSendValue;
+
+            // Also swap amounts for a more intuitive feel, if desired
+            const sendAmount = sendAmountInput.value;
+            // const receiveAmount = receiveAmountInput.value; // Use this if you want to swap displayed values
+            sendAmountInput.value = ''; // Or clear send amount after swap
+            receiveAmountInput.value = ''; // Clear receive amount
+
+            updateExchangeCalculation(); // Recalculate
         } else {
-            console.warn("Cannot swap: currencies not available in both lists.");
-            // Optionally show a message to the user
+            console.warn("Cannot swap: One currency not available in the other list.");
+            // Optional: Show a user-friendly message
+            // exchangeRateDisplay.textContent = "Обмен невозможен для этой пары";
         }
     }
 
-
-    // --- Event Listeners ---
-    if (sendAmountInput && receiveAmountInput && sendCurrencySelect && receiveCurrencySelect && exchangeRateDisplay) {
-        sendAmountInput.addEventListener('input', updateCalculation);
-        sendCurrencySelect.addEventListener('change', updateCalculation);
-        receiveCurrencySelect.addEventListener('change', updateCalculation);
-        if(swapButton) {
+    // --- Attach Event Listeners ---
+    if (sendAmountInput && receiveAmountInput && sendCurrencySelect && receiveCurrencySelect && exchangeRateDisplay && sendCurrencyIcon && receiveCurrencyIcon) {
+        sendAmountInput.addEventListener('input', updateExchangeCalculation);
+        sendCurrencySelect.addEventListener('change', updateExchangeCalculation);
+        receiveCurrencySelect.addEventListener('change', updateExchangeCalculation);
+        if (swapButton) {
             swapButton.addEventListener('click', swapCurrencies);
         }
 
-
         // Initial calculation on page load
-        updateCalculation();
+        updateExchangeCalculation();
 
-        // Refresh calculation periodically (e.g., every 15 seconds)
-        setInterval(updateCalculation, 15000);
+        // Optional: Refresh calculation periodically (e.g., every 15 seconds)
+        // Consider rate limits if refreshing very frequently
+        // setInterval(updateExchangeCalculation, 15000);
+
     } else {
-        console.error("One or more exchange form elements not found!");
+        console.error("CRITICAL: One or more exchange form elements not found! Calculation disabled.");
+        if(exchangeRateDisplay) exchangeRateDisplay.textContent = "Ошибка: Форма обмена неисправна.";
     }
 
-});
+}); // End DOMContentLoaded
