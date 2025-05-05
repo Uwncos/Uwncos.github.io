@@ -747,3 +747,192 @@ section {
     .text-content h2 { font-size: 1.3rem; }
     .text-content p, .text-content ul li, .text-content ol li { font-size: 0.95rem; }
 }
+input[readonly] {
+    background-color: #e9ecef; /* Light grey */
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Style for the dynamic exchange rate display */
+.rate-info {
+    font-weight: 600;
+    opacity: 0.9;
+    min-height: 1.2em; /* Prevent layout shift while loading */
+    color: #fff; /* Make sure it's visible on dark background */
+}
+
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+    display: none; /* Hidden on desktop */
+    background: none;
+    border: none;
+    color: var(--text-on-dark);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px;
+}
+
+/* Style for the Telegram buttons in the top bar */
+.top-bar .telegram-contact,
+.top-bar .telegram-news {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-on-dark);
+    transition: opacity 0.2s ease;
+    font-size: 0.9rem; /* Match other top-bar text */
+}
+.top-bar .telegram-contact:hover,
+.top-bar .telegram-news:hover {
+    opacity: 0.8;
+    text-decoration: none;
+}
+.top-bar .contact-info i {
+    font-size: 1em;
+    line-height: 1;
+}
+
+/* --- Adjustments for Responsiveness --- */
+@media (max-width: 767px) {
+    .mobile-menu-toggle {
+        display: block; /* Show burger */
+    }
+    .nav-menu {
+        display: none; /* Hide menu by default */
+        /* Styles for when .active class is added by JS */
+        &.active {
+            display: block;
+            position: absolute;
+            top: 100%; /* Position below the nav bar */
+            left: 0;
+            width: 100%;
+            background-color: var(--primary-color); /* Same as nav */
+            padding: 15px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        &.active li {
+            display: block;
+            text-align: center;
+            margin: 0;
+        }
+        &.active li a {
+            display: block;
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+         &.active li:last-child a {
+            border-bottom: none;
+        }
+    }
+    .nav-right {
+        display: none; /* Hide desktop auth buttons */
+    }
+    /* Adjust top bar spacing on mobile if needed */
+    .top-bar .contact-info {
+        gap: 10px 15px; /* Vertical and horizontal gap */
+        justify-content: center;
+    }
+}
+
+/* --- Include all previous styles as well --- */
+/* --- Basic Reset & Global Styles --- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root { /* ... variables ... */ }
+body { /* ... body styles ... */ }
+.container { /* ... container styles ... */ }
+h1, h2, h3, h4 { /* ... heading styles ... */ }
+a { /* ... link styles ... */ }
+img { /* ... img styles ... */ }
+ul { list-style: none; }
+
+/* --- Buttons --- */
+.btn { /* ... btn styles ... */ }
+.btn-primary { /* ... btn-primary styles ... */ }
+.btn-secondary { /* ... btn-secondary styles ... */ }
+.btn-large { /* ... btn-large styles ... */ }
+
+/* --- Header & Navigation --- */
+.top-bar { /* ... top-bar styles ... */ }
+.top-bar-content { /* ... top-bar-content styles ... */ }
+/* .contact-info a, .contact-info span { ... } */ /* Keep if you have other contacts */
+.user-status { /* ... user-status styles ... */ }
+.main-nav { /* ... main-nav styles ... */ }
+.nav-content { /* ... nav-content styles ... */ }
+.logo img { /* ... logo styles ... */ }
+/* .nav-menu { ... } */ /* Modified above */
+/* .nav-right { ... } */ /* Modified above */
+.lang-select select { /* ... lang-select styles ... */ }
+.auth-buttons .btn { /* ... auth-buttons styles ... */ }
+
+/* --- Main Content --- */
+main { /* ... main styles ... */ }
+section { /* ... section styles ... */ }
+
+/* Exchange Form */
+.exchange-section { /* ... exchange-section styles ... */ }
+.exchange-section h1 { /* ... h1 styles ... */ }
+.exchange-form-container { /* ... form-container styles ... */ }
+.exchange-form { /* ... form styles ... */ }
+.form-column { /* ... form-column styles ... */ }
+.form-column label { /* ... label styles ... */ }
+.input-group { /* ... input-group styles ... */ }
+.input-group input[type="number"] { /* ... input styles ... */ }
+.currency-select-wrapper { /* ... select-wrapper styles ... */ }
+.currency-icon { /* ... icon styles ... */ }
+.input-group select { /* ... select styles ... */ }
+.form-info { /* ... form-info styles ... */ }
+.swap-button-container { /* ... swap-button-container styles ... */ }
+.swap-button { /* ... swap-button styles ... */ }
+.form-row-full { /* ... form-row-full styles ... */ }
+/* .rate-info { ... } */ /* Modified above */
+.submit-container { /* ... submit-container styles ... */ }
+
+/* --- Grid Layout --- */
+.grid { /* ... grid styles ... */ }
+.grid-3 { /* ... grid-3 styles ... */ }
+
+/* --- Card Styles --- */
+.advantage-card, .review-card, .news-card { /* ... card base styles ... */ }
+.advantage-card .card-icon { /* ... advantage icon styles ... */ }
+.review-card { /* ... review card specific styles ... */ }
+.review-header { /* ... review header styles ... */ }
+.reviewer-name { /* ... reviewer name styles ... */ }
+.review-date { /* ... review date styles ... */ }
+.news-card { /* ... news card specific styles ... */ }
+.news-date { /* ... news date styles ... */ }
+.news-card h4 { /* ... news card h4 styles ... */ }
+.news-card p { /* ... news card p styles ... */ }
+.read-more { /* ... read-more styles ... */ }
+
+/* Section Header */
+.section-header { /* ... section-header styles ... */ }
+.section-header h2 { /* ... h2 styles ... */ }
+.section-header .btn { /* ... btn styles ... */ }
+
+/* Partners Section */
+.partners-section h2 { /* ... partners h2 styles ... */ }
+.partners-logos { /* ... partners-logos styles ... */ }
+.partners-logos img { /* ... partners img styles ... */ }
+
+/* --- Footer --- */
+.footer { /* ... footer styles ... */ }
+.footer-content { /* ... footer-content styles ... */ }
+.footer-col h4 { /* ... footer h4 styles ... */ }
+.footer-col ul li { /* ... footer li styles ... */ }
+.footer-col a { /* ... footer a styles ... */ }
+.footer-col p { /* ... footer p styles ... */ }
+.footer-col .copyright { /* ... copyright styles ... */ }
+.footer-logo { /* ... footer-logo styles ... */ }
+.social-links a { /* ... social-links styles ... */ }
+
+/* Content Page Styling */
+.content-page { /* ... content-page styles ... */ }
+.content-page h1 { /* ... h1 styles ... */ }
+.text-content h2 { /* ... h2 styles ... */ }
+.text-content p, .text-content ul, .text-content ol { /* ... text styles ... */ }
+.text-content ul li { /* ... ul li styles ... */ }
+.text-content ol li { /* ... ol li styles ... */ }
+.faq-list .faq-item { /* ... faq item styles ... */ }
+.faq-list .faq-item h3 { /* ... faq h3 styles ... */ }
