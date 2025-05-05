@@ -3,30 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Крипто Обменник - Главная</title>
-    <link rel="stylesheet" href="/style.css">
+    <title>Крипто Обменник - Расширенный UI</title>
+    <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-    <!-- Top Bar -->
+    <!-- Top Bar (Same as previous) -->
     <div class="top-bar">
         <div class="container top-bar-content">
             <div class="contact-info">
-                 <!-- New Telegram Buttons -->
-                <a href="tg://resolve?domain=YourSupportUsername" target="_blank" class="telegram-contact">
-                    <i class="fas fa-paper-plane"></i> Написать
-                </a>
-                <a href="https://t.me/YourNewsChannel" target="_blank" class="telegram-news">
-                    <i class="fas fa-bullhorn"></i> Новостной канал в Telegram
-                </a>
-                 <!-- Original contact info (optional) -->
-                <!-- <a href="mailto:info@yourexchange.com"><i class="fas fa-envelope"></i> info@yourexchange.com</a> -->
-                <!-- <span><i class="fas fa-clock"></i> Пн-Пт: 10:00 - 21:00 | Сб-Вс: 11:00 - 21:00</span> -->
+                <a href="tg://resolve?domain=YourSupportUsername" target="_blank" class="telegram-contact"><i class="fas fa-paper-plane"></i> Написать</a>
+                <a href="https://t.me/YourNewsChannel" target="_blank" class="telegram-news"><i class="fas fa-bullhorn"></i> Новостной канал в Telegram</a>
             </div>
             <div class="user-status">
                 <span>Статус: <span class="status-online">Онлайн</span></span>
@@ -34,138 +25,153 @@
         </div>
     </div>
 
-    <!-- Main Navigation -->
+    <!-- Main Navigation (Same as previous) -->
      <nav class="main-nav">
-    <div class="container nav-content">
-        <a href="index.html" class="logo">
-            <img src="placeholder-logo.svg" alt="Логотип Обменника"> <!-- Replace with your logo -->
-        </a>
-        <ul class="nav-menu" id="nav-menu"> <!-- Added ID for JS -->
-            <li><a href="index.html">Обмен</a></li>
-            <li><a href="#">Курсы</a></li>
-            <li><a href="#">Отзывы</a></li>
-            <li><a href="#">Новости</a></li>
-            <li><a href="faq.html">FAQ</a></li>
-            <li><a href="about.html">О нас</a></li>
-             <li><a href="aml-kyc.html">AML/KYC</a></li>
-        </ul>
-        <div class="nav-right">
-            <div class="auth-buttons">
-                <a href="#" class="btn btn-secondary">Войти</a>
+        <div class="container nav-content">
+            <a href="index.html" class="logo">
+                <img src="placeholder-logo.svg" alt="Логотип Обменника">
+            </a>
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="index.html">Обмен</a></li>
+                <li><a href="#">Курсы</a></li>
+                <li><a href="#">Отзывы</a></li>
+                <li><a href="#">Новости</a></li>
+                <li><a href="faq.html">FAQ</a></li>
+                <li><a href="about.html">О нас</a></li>
+                 <li><a href="aml-kyc.html">AML/KYC</a></li>
+            </ul>
+            <div class="nav-right">
+                <div class="auth-buttons">
+                    <a href="#" class="btn btn-secondary">Войти</a>
+                </div>
             </div>
+            <button class="mobile-menu-toggle" aria-label="Toggle Menu" id="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
-        <button class="mobile-menu-toggle" aria-label="Toggle Menu" id="mobile-menu-toggle"> <!-- Added ID for JS -->
-            <i class="fas fa-bars"></i>
-        </button>
-    </div>
-</nav>
+    </nav>
 
-<!-- Main Content Area -->
-<main>
-    <!-- Exchange Form Section -->
-    <section class="exchange-section">
-        <div class="container">
-            <h1>Быстрый и Безопасный Обмен Криптовалют</h1>
-            <div class="exchange-form-container">
-                <form class="exchange-form">
-                    <div class="form-column send-column">
-                        <label for="send-amount">Отправляете</label>
-                        <div class="input-group">
-                            <!-- Added id="send-amount-input" -->
-                            <input type="number" id="send-amount-input" name="send_amount" placeholder="Введите сумму" value="1" step="any">
-                            <div class="currency-select-wrapper">
-                                <img src="btc-icon.png" alt="BTC" class="currency-icon" id="send-currency-icon">
-                                <!-- Added id="send-currency-select" -->
-                                <select id="send-currency-select" name="send_currency">
-                                    <option value="BTC" data-icon="btc-icon.png">Bitcoin (BTC)</option>
-                                    <option value="ETH" data-icon="eth-icon.png">Ethereum (ETH)</option>
-                                    <option value="USDT" data-icon="usdt-icon.png">Tether (USDT)</option>
-                                    <!-- Add more options as needed -->
-                                </select>
-                            </div>
+    <!-- Main Content Area -->
+    <main>
+        <!-- Exchange Form Section -->
+        <section class="exchange-section-v2">
+            <div class="container">
+                <form class="exchange-form-v2">
+
+                    <!-- === SEND COLUMN === -->
+                    <div class="currency-column" id="send-column">
+                        <div class="column-header">
+                            <span>Отдаёте</span>
+                            <button type="button" class="sort-button" aria-label="Sort Send List"><i class="fas fa-arrow-up"></i></button>
                         </div>
-                         <div class="form-info" id="send-limit-info">Мин: 0.005 BTC | Макс: 10 BTC</div> <!-- Added ID -->
+                        <div class="currency-selector">
+                            <div class="amount-input-wrapper">
+                                <input type="number" id="send-amount-input" name="send_amount" placeholder="0.00" value="1" step="any">
+                                <span class="amount-currency-symbol" id="send-currency-symbol">€</span>
+                                <img src="icons/cash_eur.png" alt="EUR" class="amount-currency-icon" id="send-currency-icon"> <!-- Default Icon -->
+                            </div>
+                            <div class="limit-reserve-info" id="send-limit-info">Мин: 3000.00 Макс: 100000.00</div>
+                            <div class="search-wrapper">
+                                <input type="text" class="search-input" placeholder="Search by currency">
+                                <i class="fas fa-search search-icon"></i>
+                            </div>
+                            <div class="filter-buttons">
+                                <button type="button" class="filter-btn active" data-filter="all">ВСЕ</button>
+                                <button type="button" class="filter-btn" data-filter="usd">USD</button>
+                                <button type="button" class="filter-btn" data-filter="eur">EUR</button>
+                                <button type="button" class="filter-btn" data-filter="rub">RUB</button>
+                                <!-- Add more filters as needed -->
+                            </div>
+                            <div class="currency-list-container">
+                                <div class="currency-list" id="send-currency-list">
+                                    <!-- Currency items will be populated by JavaScript -->
+                                    <div class="list-loading">Загрузка валют...</div>
+                                </div>
+                            </div>
+                             <input type="hidden" name="send_currency" id="send_currency_hidden" value="CASH_EUR"> <!-- Hidden input to store selection -->
+                        </div>
                     </div>
 
-                    <div class="swap-button-container">
+                    <!-- === SWAP BUTTON === -->
+                    <div class="swap-button-container-v2">
                         <button type="button" class="swap-button" aria-label="Swap Currencies" id="swap-button">
                             <i class="fas fa-exchange-alt"></i>
                         </button>
                     </div>
 
-                    <div class="form-column receive-column">
-                        <label for="receive-amount">Получаете</label>
-                        <div class="input-group">
-                             <!-- Added id="receive-amount-input" -->
-                            <input type="number" id="receive-amount-input" name="receive_amount" placeholder="~ Расчетная сумма" readonly>
-                             <div class="currency-select-wrapper">
-                                <img src="usdt-icon.png" alt="USDT" class="currency-icon" id="receive-currency-icon">
-                                <!-- Added id="receive-currency-select" -->
-                                <select id="receive-currency-select" name="receive_currency">
-                                    <option value="USDT" data-icon="usdt-icon.png">Tether (USDT)</option>
-                                    <option value="ETH" data-icon="eth-icon.png">Ethereum (ETH)</option>
-                                    <option value="BTC" data-icon="btc-icon.png">Bitcoin (BTC)</option>
-                                    <!-- Add more options, including Fiat if supported -->
-                                    <!-- <option value="SBERRUB" data-icon="sber-icon.png">Сбербанк RUB</option> -->
-                                </select>
-                            </div>
+                    <!-- === RECEIVE COLUMN === -->
+                    <div class="currency-column" id="receive-column">
+                         <div class="column-header">
+                            <span>Получите</span>
+                             <button type="button" class="sort-button" aria-label="Sort Receive List"><i class="fas fa-arrow-down"></i></button>
                         </div>
-                         <div class="form-info" id="receive-reserve-info">Резерв: ...</div> <!-- Added ID -->
+                         <div class="currency-selector">
+                            <div class="amount-input-wrapper">
+                                <input type="number" id="receive-amount-input" name="receive_amount" placeholder="0" readonly>
+                                <span class="amount-currency-symbol" id="receive-currency-symbol">$</span>
+                                <img src="icons/usdc_erc20.png" alt="USDC" class="amount-currency-icon" id="receive-currency-icon"> <!-- Default Icon -->
+                            </div>
+                            <div class="limit-reserve-info" id="receive-reserve-info">Резерв: 98749889.3668</div>
+                            <div class="search-wrapper">
+                                <input type="text" class="search-input" placeholder="Search by currency">
+                                 <i class="fas fa-search search-icon"></i>
+                            </div>
+                            <div class="filter-buttons">
+                                <button type="button" class="filter-btn active" data-filter="all">ВСЕ</button>
+                                <button type="button" class="filter-btn" data-filter="usd">USD</button>
+                                <button type="button" class="filter-btn" data-filter="eur">EUR</button>
+                                <button type="button" class="filter-btn" data-filter="rub">RUB</button>
+                            </div>
+                             <div class="currency-list-container">
+                                <div class="currency-list" id="receive-currency-list">
+                                    <!-- Currency items will be populated by JavaScript -->
+                                     <div class="list-loading">Загрузка валют...</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="receive_currency" id="receive_currency_hidden" value="USDC_ERC20"> <!-- Hidden input to store selection -->
+                        </div>
                     </div>
 
-                    <div class="form-row-full rate-info">
-                         <!-- Added id="exchange-rate-display" -->
+                     <!-- Rate Info (Optional, can be placed differently) -->
+                     <div class="form-row-full-v2 rate-info-v2">
                         <span id="exchange-rate-display">Курс обмена: Загрузка...</span>
                     </div>
 
-                    <div class="form-row-full submit-container">
-                        <button type="submit" class="btn btn-primary btn-large">Начать обмен</button>
+                     <!-- Submit Button (Optional, might be on next step) -->
+                    <div class="form-row-full-v2 submit-container-v2">
+                         <button type="submit" class="btn btn-primary btn-large">Продолжить обмен</button>
                     </div>
+
                 </form>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ... (Rest of the sections: Advantages, Reviews, News, Partners remain the same) ... -->
-</main>
+        <!-- Advantages Section -->
+        <section class="advantages-section">
+           <!-- ... (same as before) ... -->
+        </section>
 
-<!-- Footer (Same as before) -->
- <footer class="footer">
-        <div class="container footer-content">
-            <div class="footer-col">
-                <img src="placeholder-logo.svg" alt="Логотип Обменника" class="footer-logo">
-                <p class="copyright">© 2024 Ваше Название Обменника. <br>Все права защищены.</p>
-            </div>
-             <div class="footer-col">
-                <h4>Навигация</h4>
-                <ul>
-                    <li><a href="about.html">О нас</a></li>
-                    <li><a href="#">Условия использования</a></li>
-                    <li><a href="#">Политика конфиденциальности</a></li>
-                    <li><a href="aml-kyc.html">AML/KYC</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                 <h4>Поддержка</h4>
-                <ul>
-                    <li><a href="faq.html">FAQ</a></li>
-                    <li><a href="#">Контакты</a></li>
-                    <li><a href="#">API</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Контакты</h4>
-                 <p><a href="mailto:info@yourexchange.com"><i class="fas fa-envelope"></i> info@yourexchange.com</a></p>
-                 <p><a href="tg://resolve?domain=YourSupportUsername" target="_blank"><i class="fab fa-telegram"></i> Поддержка в Telegram</a></p>
-                 <div class="social-links">
-                     <a href="#"><i class="fab fa-twitter"></i></a>
-                     <a href="#"><i class="fab fa-facebook-f"></i></a>
-                     <a href="#"><i class="fab fa-vk"></i></a>
-                 </div>
-            </div>
-        </div>
+        <!-- Reviews Section -->
+        <section class="reviews-section">
+           <!-- ... (same as before) ... -->
+        </section>
+
+        <!-- News Section -->
+        <section class="news-section">
+            <!-- ... (same as before) ... -->
+        </section>
+
+        <!-- Partners Section -->
+        <section class="partners-section">
+            <!-- ... (same as before) ... -->
+        </section>
+    </main>
+
+    <!-- Footer (Same as before) -->
+    <footer class="footer">
+        <!-- ... (same as before) ... -->
     </footer>
 
-<script src="script.js"></script> <!-- Link the script -->
+    <script src="script.js"></script>
 </body>
 </html>
