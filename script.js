@@ -53,9 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // --- Binance API ---
-    const binanceApiBase = 'https://api.binance.com/api/v3/ticker/price';
-    const priceCache = {};
-    const CACHE_DURATION = 15000; // 15 seconds
+    const API_BASE = 'http://localhost:3000/api';
 
     // --- Initialization ---
     populateCurrencyList(sendCurrencyList, currencies, 'send');
@@ -342,136 +340,166 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Binance API Fetching & Calculation (Modified from previous) ---
 
-    /**
-     * Fetches price from Binance API (simplified, no inverse check here as findSymbol handles it)
-     */
-    async function getBinancePrice(symbol) {
-        const now = Date.now();
-        if (priceCache[symbol] && (now - priceCache[symbol].timestamp < CACHE_DURATION)) {
-            console.log(`Using cached price for ${symbol}`);
-            return priceCache[symbol].price;
-        }
-        console.log(`(API) Fetching price for ${symbol}...`);
+    async function getExchangeRate(from, to) {
         try {
-            const response = await fetch(`${binanceApiBase}?symbol=${symbol}`);
-            if (!response.ok) {
-                console.error(`Binance API error for ${symbol}: ${response.status}`);
-                return null;
-            }
+            const response = await fetch(`${API_BASE}/rates?from=${from}&to=${to}`);
             const data = await response.json();
-            const price = parseFloat(data.price);
-            if (isNaN(price) || price <= 0) return null;
-            priceCache[symbol] = { price: price, timestamp: now };
-            return price;
+            return data.rate;
         } catch (error) {
-            console.error(`Network error fetching ${symbol}:`, error);
+            console.error('Error fetching exchange rate:', error);
             return null;
         }
     }
 
-    /**
-      * Determines the Binance symbol and calculation direction.
-      */
-    async function findBinanceSymbolAndCalculation(send, receive) {
-         // Only handle pairs likely on Binance Spot (Crypto/Stablecoin)
-        const cryptoOrStable = ['BTC', 'ETH', 'USDT', 'USDC', 'BUSD', 'TON']; // Add more
-        if (!cryptoOrStable.includes(send) || !cryptoOrStable.includes(receive)) {
-            console.log(`Pair ${send}/${receive} likely not on Binance Spot API.`);
-            return { symbol: null, price: null, calculation: null }; // Indicate not a direct Binance pair
+    async function getReserves() {
+        try {
+            const response = await fetch(`${API_BASE}/reserves`);
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error fetching reserves:', error);
+            return [];
         }
+    }
 
-        const standardSymbol = `${send}${receive}`;
-        const reversedSymbol = `${receive}${send}`;
-
-        let price = await getBinancePrice(standardSymbol);
-        if (price !== null) {
-            return { symbol: standardSymbol, price: price, calculation: 'multiply' };
+    async function getTradingPairs() {
+        try {
+            const response = await fetch(`${API_BASE}/trading-pairs`);
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error fetching trading pairs:', error);
+            return [];
         }
-
-        price = await getBinancePrice(reversedSymbol);
-        if (price !== null) {
-            return { symbol: reversedSymbol, price: price, calculation: 'divide' };
-        }
-
-        console.warn(`Could not find Binance price for ${standardSymbol} or ${reversedSymbol}`);
-        return { symbol: null, price: null, calculation: null };
     }
 
     /**
      * Updates the receive amount and displayed rate based on inputs.
      */
     async function updateExchangeCalculation() {
-        const sendCode = sendHiddenInput.value;
-        const receiveCode = receiveHiddenInput.value;
-        const sendAmount = parseFloat(sendAmountInput.value);
+        const sendAmount = parseFloat(sendAmountInput.value) || 0;
+        const sendCurrency = sendHiddenInput.value;
+        const receiveCurrency = receiveHiddenInput.value;
 
-        // Clear outputs if input is invalid or currencies are the same
-        if (isNaN(sendAmount) || sendAmount <= 0 || !sendCode || !receiveCode || sendCode === receiveCode) {
+        if (!sendAmount || !sendCurrency || !receiveCurrency) {
             receiveAmountInput.value = '';
-            exchangeRateDisplay.textContent = 'Курс обмена: ---';
+            exchangeRateDisplay.textContent = 'Выберите валюты и введите сумму';
             return;
         }
 
-        exchangeRateDisplay.textContent = 'Курс обмена: Расчет...';
-        receiveAmountInput.value = '';
-
-        // --- Attempt to get rate from Binance API ---
-        const { symbol, price, calculation } = await findBinanceSymbolAndCalculation(sendCode, receiveCode);
-
-        let finalRate = 0;
-        let receiveAmount = 0;
-
-        if (calculation && price) {
-            // Rate found via Binance API
-            if (calculation === 'multiply') {
-                finalRate = price;
-                receiveAmount = sendAmount * finalRate;
-            } else { // divide
-                 if (price === 0) {
-                     exchangeRateDisplay.textContent = 'Курс обмена: Ошибка курса (0)';
-                     return;
-                 }
-                finalRate = 1 / price;
-                receiveAmount = sendAmount / price;
-            }
-             console.log(`Rate from Binance for ${symbol} (${calculation}): ${price}, Calculated Rate: ${finalRate}`);
-        } else {
-            // --- HANDLE NON-BINANCE PAIRS OR FAILED FETCH ---
-            // This is where you'd implement your internal logic, call other APIs,
-            // or use manually set rates for pairs like CASH EUR -> USDC.
-            // For this example, we'll just show 'not available'.
-            console.log(`No direct Binance rate found for ${sendCode} -> ${receiveCode}. Using fallback/placeholder.`);
-            exchangeRateDisplay.textContent = 'Курс обмена: Недоступен для этой пары';
-             // You might want to set a placeholder receive amount or keep it empty
-            receiveAmountInput.value = ''; // Keep empty if rate unavailable
-            return; // Stop further calculation if rate is unavailable
-            // --- END Fallback ---
+        const rate = await getExchangeRate(sendCurrency, receiveCurrency);
+        
+        if (rate === null) {
+            exchangeRateDisplay.textContent = 'Курс недоступен';
+            receiveAmountInput.value = '';
+            return;
         }
 
-
-        // --- Apply Your Exchange Fee/Markup ---
-        const feePercentage = 0.015; // Example: 1.5% fee
-        receiveAmount *= (1 - feePercentage);
-        // Adjust displayed rate if needed: finalRate *= (1 - feePercentage);
-        // --- End Fee/Markup ---
-
-        // --- Format Output ---
-        const cryptoDecimals = 8;
-        const stablecoinDecimals = 2;
-        const fiatDecimals = 2;
-
-        let receiveDecimals = cryptoDecimals;
-        if (['USDT', 'USDC', 'BUSD', 'DAI'].some(s => receiveCode.includes(s))) receiveDecimals = stablecoinDecimals;
-        if (['CASH_EUR', 'CASH_USD', 'CASH_RUB', 'KORONAPAY_USD', 'KORONAPAY_RUB'].includes(receiveCode)) receiveDecimals = fiatDecimals; // Example
-
-        let rateDecimals = receiveDecimals; // Start with receive decimals for rate display
-        if (finalRate > 0 && finalRate < 0.01) rateDecimals = Math.max(rateDecimals, 6); // More precision for small rates
-         if (finalRate > 10000) rateDecimals = 2; // Less precision for large rates
-
-
-        receiveAmountInput.value = receiveAmount > 0 ? receiveAmount.toFixed(receiveDecimals) : '';
-        exchangeRateDisplay.textContent = `Курс обмена: 1 ${sendCode.split('_')[0]} ≈ ${finalRate.toFixed(rateDecimals)} ${receiveCode.split('_')[0]}`;
-
+        const receiveAmount = sendAmount * rate;
+        receiveAmountInput.value = receiveAmount.toFixed(8);
+        exchangeRateDisplay.textContent = `1 ${sendCurrency} = ${rate.toFixed(8)} ${receiveCurrency}`;
     }
 
 }); // End DOMContentLoaded
+
+let currencies = [];
+let tradingPairs = [];
+
+async function loadData() {
+    // Получить валюты и пары с сервера
+    currencies = await fetch(API_BASE + '/currencies').then(r => r.json());
+    tradingPairs = await fetch(API_BASE + '/trading-pairs').then(r => r.json());
+    populateCurrencyList(sendCurrencyList, currencies, 'send');
+    populateCurrencyList(receiveCurrencyList, currencies, 'receive');
+    setupEventListeners();
+    selectInitialCurrency(sendCurrencyList, sendHiddenInput.value);
+    selectInitialCurrency(receiveCurrencyList, receiveHiddenInput.value);
+    updateExchangeCalculation();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+});
+
+function getAvailableReceiveCurrencies(sendCurrency) {
+    // Вернуть только те валюты, на которые можно поменять sendCurrency
+    const available = tradingPairs
+        .filter(pair => pair.from_currency === sendCurrency)
+        .map(pair => pair.to_currency);
+    return currencies.filter(cur => available.includes(cur.currency));
+}
+
+function getAvailableSendCurrencies(receiveCurrency) {
+    // Вернуть только те валюты, с которых можно поменять на receiveCurrency
+    const available = tradingPairs
+        .filter(pair => pair.to_currency === receiveCurrency)
+        .map(pair => pair.from_currency);
+    return currencies.filter(cur => available.includes(cur.currency));
+}
+
+// Изменяем populateCurrencyList для фильтрации по доступности
+function populateCurrencyList(listElement, currencyData, type) {
+    listElement.innerHTML = '';
+    if (!currencyData || currencyData.length === 0) {
+        listElement.innerHTML = '<div class="list-loading">Нет доступных валют.</div>';
+        return;
+    }
+    currencyData.forEach(currency => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'currency-item';
+        item.setAttribute('data-code', currency.currency || currency.code);
+        item.setAttribute('data-name', (currency.name || currency.currency || currency.code).toLowerCase());
+        item.setAttribute('data-type', (currency.type || '').toLowerCase());
+        item.setAttribute('data-icon', currency.icon || 'icons/placeholder.png');
+        item.setAttribute('data-symbol', getCurrencySymbol(currency.currency || currency.code));
+        if (currency.amount !== undefined) item.setAttribute('data-reserve', currency.amount);
+        const icon = document.createElement('img');
+        icon.className = 'item-icon';
+        icon.src = currency.icon || 'icons/placeholder.png';
+        icon.alt = currency.currency || currency.code;
+        icon.loading = 'lazy';
+        const info = document.createElement('div');
+        info.className = 'item-info';
+        const name = document.createElement('span');
+        name.className = 'item-name';
+        name.textContent = currency.name || currency.currency || currency.code;
+        info.appendChild(name);
+        if (type === 'receive' && currency.amount !== undefined) {
+            const reserve = document.createElement('span');
+            reserve.className = 'item-reserve';
+            reserve.textContent = `${parseFloat(currency.amount).toLocaleString('ru-RU')} ${(currency.currency || currency.code).split('_')[0]}`;
+            info.appendChild(reserve);
+        }
+        const checkmark = document.createElement('i');
+        checkmark.className = 'fas fa-check-circle item-checkmark';
+        item.appendChild(icon);
+        item.appendChild(info);
+        item.appendChild(checkmark);
+        listElement.appendChild(item);
+    });
+}
+
+// Модифицируем handleCurrencySelection для динамической фильтрации
+function handleCurrencySelection(event) {
+    const item = event.target.closest('.currency-item');
+    if (!item) return;
+    const listContainer = item.closest('.currency-list');
+    const column = listContainer.closest('.currency-column');
+    const isSendColumn = column.id === 'send-column';
+    const code = item.getAttribute('data-code');
+    if (isSendColumn) {
+        sendHiddenInput.value = code;
+        // Фильтруем список получаемых валют
+        const filtered = getAvailableReceiveCurrencies(code);
+        populateCurrencyList(receiveCurrencyList, filtered, 'receive');
+    } else {
+        receiveHiddenInput.value = code;
+        // Фильтруем список отдаваемых валют
+        const filtered = getAvailableSendCurrencies(code);
+        populateCurrencyList(sendCurrencyList, filtered, 'send');
+    }
+    // Обновляем выделение
+    item.classList.add('selected');
+    updateExchangeCalculation();
+}
